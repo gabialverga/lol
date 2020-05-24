@@ -31,48 +31,51 @@ class ListDataChampions extends Component {
 
     componentDidMount() {
         this.state.items.map(c => {
-            let path = '10.10'
-            let url = 'https://api.op.lol/champion/2/?patch=' + path + '&cid=' + c.text + '&lane=' + c.lane + '&tier=diamond_plus&queue=ranked&region=kr';
-            axios.get(url)
-                .then(resp => {
-                    let laneOrder = 'enemy_' + c.lane;
-                    let dt = resp.data.display[laneOrder];
-                    let winRate = parseFloat(resp.data.display.winRate);
-                    let pick = resp.data.display.pick;
+            axios.get('https://cdn.op.lol/v/current/json/core.json')
+                .then(p => {
+                    let patch = p.data.version;
+                    let url = 'https://api.op.lol/champion/2/?patch=' + patch + '&cid=' + c.text + '&lane=' + c.lane + '&tier=diamond_plus&queue=ranked&region=kr';
+                    axios.get(url)
+                        .then(resp => {
+                            let laneOrder = 'enemy_' + c.lane;
+                            let dt = resp.data.display[laneOrder];
+                            let winRate = parseFloat(resp.data.display.winRate);
+                            let pick = resp.data.display.pick;
 
-                    let x = dt.map((row) => [
-                        row[0],
-                        ((row[2] / row[1]) * 100).toFixed(2),
-                        ((row[2] / row[1]) * 100 + row[3] - 100).toFixed(2),
-                        ((row[1] / pick) * 100).toFixed(2),
-                        row[1].toLocaleString(),
-                        ((row[2] / row[1]) * 100 - (winRate / (row[3] + winRate) * 100)).toFixed(2)])
+                            let x = dt.map((row) => [
+                                row[0],
+                                ((row[2] / row[1]) * 100).toFixed(2),
+                                ((row[2] / row[1]) * 100 + row[3] - 100).toFixed(2),
+                                ((row[1] / pick) * 100).toFixed(2),
+                                row[1].toLocaleString(),
+                                ((row[2] / row[1]) * 100 - (winRate / (row[3] + winRate) * 100)).toFixed(2)])
 
-                    let n = x.filter(row => parseFloat(row[3]) >= 0.5)
+                            let n = x.filter(row => parseFloat(row[3]) >= 0.5)
 
-                    let championData = {
-                        cid: c.text,
-                        lane: c.lane,
-                        strong: n.sort((a, b) => {
-                            if (parseFloat(b[1]) == parseFloat(a[1])) {
-                                return parseFloat(b[4]) - parseFloat(a[4])
-                            } else {
-                                return parseFloat(b[1]) - parseFloat(a[1])
+                            let championData = {
+                                cid: c.text,
+                                lane: c.lane,
+                                strong: n.sort((a, b) => {
+                                    if (parseFloat(b[1]) == parseFloat(a[1])) {
+                                        return parseFloat(b[4]) - parseFloat(a[4])
+                                    } else {
+                                        return parseFloat(b[1]) - parseFloat(a[1])
+                                    }
+                                }).slice(0, this.state.n),
+                                weak: n.sort((a, b) => {
+                                    if (parseFloat(b[1]) == parseFloat(a[1])) {
+                                        return parseFloat(b[4]) - parseFloat(a[4])
+                                    } else {
+                                        return parseFloat(a[1]) - parseFloat(b[1])
+                                    }
+                                }).slice(0, this.state.n)
                             }
-                        }).slice(0, this.state.n),
-                        weak: n.sort((a, b) => {
-                            if (parseFloat(b[1]) == parseFloat(a[1])) {
-                                return parseFloat(b[4]) - parseFloat(a[4])
-                            } else {
-                                return parseFloat(a[1]) - parseFloat(b[1])
-                            }
-                        }).slice(0, this.state.n)
-                    }
 
-                    this.addItem(championData);
-                })
-                .catch(error => {
-                    console.log(error)
+                            this.addItem(championData);
+                        })
+                        .catch(error => {
+                            console.log(error)
+                        });
                 });
         });
     }
