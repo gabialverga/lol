@@ -4,19 +4,16 @@ import champions from './attChampions.json'
 import iconsChampions from './iconsChampions.json'
 import './App.css';
 import ReactHtmlParser from 'react-html-parser';
-import { useHistory } from 'react-router-dom';
 
 class ListDataChampions extends Component {
 
     constructor(props) {
-        console.log(props);
         super(props);
         if (!('items' in this.props.location)) {
-            console.log("Opa");
             window.location.assign("/");
         }
         this.state = {
-            n: 5,
+            n: 10,
             items: this.props.location.items,
             champs: []
         }
@@ -40,20 +37,36 @@ class ListDataChampions extends Component {
                 .then(resp => {
                     let laneOrder = 'enemy_' + c.lane;
                     let dt = resp.data.display[laneOrder];
-                    let x = 0;
-                    for (let i = 0; i < dt.length; i++) {
-                        x += dt[i][1];
-                        dt[i].push(((dt[i][2] / dt[i][1]) * 100).toFixed(2));
-                    }
-                    let filtered = dt.filter(function (value) { return value[1] >= (x / dt.length); });
-                    filtered.sort(function (a, b) {
-                        return b[4] - a[4];
-                    })
+                    let winRate = parseFloat(resp.data.display.winRate);
+                    let pick = resp.data.display.pick;
+
+                    let x = dt.map((row) => [
+                        row[0],
+                        ((row[2] / row[1]) * 100).toFixed(2),
+                        ((row[2] / row[1]) * 100 + row[3] - 100).toFixed(2),
+                        ((row[1] / pick) * 100).toFixed(2),
+                        row[1].toLocaleString(),
+                        ((row[2] / row[1]) * 100 - (winRate / (row[3] + winRate) * 100)).toFixed(2)])
+
+                    let n = x.filter(row => parseFloat(row[3]) >= 0.5)
+
                     let championData = {
                         cid: c.text,
                         lane: c.lane,
-                        strong: filtered.slice(0, this.state.n),
-                        weak: filtered.reverse().slice(0, this.state.n)
+                        strong: n.sort((a, b) => {
+                            if (parseFloat(b[1]) == parseFloat(a[1])) {
+                                return parseFloat(b[4]) - parseFloat(a[4])
+                            } else {
+                                return parseFloat(b[1]) - parseFloat(a[1])
+                            }
+                        }).slice(0, this.state.n),
+                        weak: n.sort((a, b) => {
+                            if (parseFloat(b[1]) == parseFloat(a[1])) {
+                                return parseFloat(b[4]) - parseFloat(a[4])
+                            } else {
+                                return parseFloat(a[1]) - parseFloat(b[1])
+                            }
+                        }).slice(0, this.state.n)
                     }
 
                     this.addItem(championData);
@@ -73,10 +86,9 @@ class ListDataChampions extends Component {
                 if (trChamps.length <= i) {
                     trChamps.push('');
                 }
-                trChamps[i] += '<td class="text-center p-2"><p class="font-weight-bold m-0">' + champ.strong[i][4].toString() + '%</p><img src=' + iconsChampions[champ.strong[i][0].toString()] + ' class="icon2"></img><p class="font-weight-bold m-0">' + champions[champ.strong[i][0].toString()] + '</p></td><td class="text-center p-2"><p class="font-weight-bold m-0">' + champ.weak[i][4].toString() + '%</p><img src=' + iconsChampions[champ.weak[i][0].toString()] + ' class="icon2"></img><p class="font-weight-bold m-0">' + champions[champ.weak[i][0].toString()] + '</p></td>'
+                trChamps[i] += '<td class="text-center p-2"><p class="font-weight-bold m-0">' + champ.strong[i][1].toString() + '%</p><img src=' + iconsChampions[champ.strong[i][0].toString()] + ' class="icon2"></img><p class="font-weight-bold m-0">' + champions[champ.strong[i][0].toString()] + '</p></td><td class="text-center p-2"><p class="font-weight-bold m-0">' + champ.weak[i][1].toString() + '%</p><img src=' + iconsChampions[champ.weak[i][0].toString()] + ' class="icon2"></img><p class="font-weight-bold m-0">' + champions[champ.weak[i][0].toString()] + '</p></td>'
             }
         });
-        console.log(trChamps);
 
         return (
             <div className="App">
@@ -97,7 +109,7 @@ class ListDataChampions extends Component {
                                 {this.state.champs.map(champ => {
                                     return <td colspan="2" className="text-center">
                                         <img src={iconsChampions[champ.lane]} className="iconLane"></img>
-                                        </td>
+                                    </td>
                                 })}
                             </tr>
                             <tr>
